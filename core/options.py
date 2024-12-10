@@ -84,6 +84,8 @@ class Options:
     start_lpips: int = 0
     # reg loss weight
     lambda_reg: float = 0.001
+    lambda_normal: float = 0.05
+    lambda_dist : float = 0.0
     # gradient clip
     gradient_clip: float = 1.0
     # mixed precision

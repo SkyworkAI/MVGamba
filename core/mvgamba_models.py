@@ -434,6 +434,8 @@ class MVGamba(torch.nn.Module):
 
         results['images_pred'] = pred_images
         results['alphas_pred'] = pred_alphas
+        results['normals_pred'] = results["render_normal"]
+        results['surf_pred'] = results["surf_normal"]
 
         gt_images = data['images_output'] # [B, V, 3, output_size, output_size], ground-truth novel views
         gt_masks = data['masks_output'] # [B, V, 1, output_size, output_size], ground-truth masks
@@ -459,7 +461,18 @@ class MVGamba(torch.nn.Module):
             loss_reg += (1. - opacity).mean()
             results['loss_reg'] = loss_reg
             loss = loss + self.opt.lambda_reg * loss_reg
-        
+
+
+        if self.opt.lambda_normal > 0 and epoch >= self.opt.start_normal :
+            # [bsz, views, 3, H, W]
+            normal_error = (1 - (results['normals_pred'] * results['surf_pred']).sum(dim=2))[:, :, None]
+            loss_normal = self.opt.lambda_normal * (normal_error).mean()
+            loss = loss + loss_normal
+            
+        if self.opt.lambda_dist > 0 and epoch >= self.opt.start_dist :
+            loss_dist = self.opt.lambda_dist * (results['render_dist']).mean()
+            loss = loss + loss_dist
+
         results['loss'] = loss
 
         assert loss_mse.dtype == torch.float32

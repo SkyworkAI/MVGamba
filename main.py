@@ -188,9 +188,14 @@ def main():
                     pred_images = pred_images.transpose(0, 3, 1, 4, 2).reshape(-1, pred_images.shape[1] * pred_images.shape[3], 3)
                     kiui.write_image(f'{opt.workspace}/train_pred_images_{epoch}_{i}.jpg', pred_images)
 
+                    pred_normals = out["normals_pred"].to(dtype=torch.float32).detach().cpu().numpy() * 0.5 + 0.5
+                    pred_normals = pred_normals.transpose(0, 3, 1, 4, 2).reshape(-1, pred_normals.shape[1] * pred_normals.shape[3], 3)
+                    kiui.write_image(f'{opt.workspace}/train_pred_normals_{epoch}_{i}.jpg', pred_normals)
+
                     # wandb log image
                     wandb_gt_image = wandb.Image(gt_images[::4, ::4, :], caption=f"train_gt_images")
                     wandb_pred_image = wandb.Image(pred_images[::4, ::4, :], caption=f"train_pred_images")
+                    wandb_pred_normal = wandb.Image(pred_normals, caption=f"train_pred_normals_{epoch}_{i}")
 
         total_loss = accelerator.gather_for_metrics(total_loss).mean()
         total_psnr = accelerator.gather_for_metrics(total_psnr).mean()
@@ -210,7 +215,9 @@ def main():
                       }, step=epoch, commit=False)
             if opt.use_gumbel_softmax:
                 wandb.log({"LR/temperature": model.module.model.decoder.get_rot.temperature}, step=epoch, commit=False)
-            wandb.log({"train/gt_images": wandb_gt_image, "train/pred_images": wandb_pred_image}, step=epoch, commit=False)
+            wandb.log({"train/gt_images": wandb_gt_image, 
+                       "train/pred_images": wandb_pred_image,
+                       "train/pred_normals": wandb_pred_normal,}, step=epoch, commit=False)
             # save psnr file
             train_psnr_log_file = os.path.join(opt.workspace, "train_psnr_log.txt")
             with open(train_psnr_log_file, "a") as file:
